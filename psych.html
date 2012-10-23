@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <script type="text/javascript" src="d3.js"></script>
+    
+    <style>
+
+    path {
+        fill:none;
+        stroke-width:1px;
+    }
+
+    .axis path{
+        fill:none;
+        stroke: black;
+    }
+    .axis {
+        font-size:10pt;
+        font-family:sans-serif;
+    }
+    .tick {
+        fill:none;
+        stroke:black;
+    }
+    circle{
+        stroke:black;
+        stroke-width:0.5px;
+        fill:RoyalBlue;
+        opacity:0.6;
+    }
+    path.rh100{
+        stroke:Black;
+    }
+    path.rhline{
+        stroke:Gray;
+    } 
+    path.w{
+        fill: White;
+    }
+    rect.chartbg{
+      fill: rgb(100,100,100);
+      fill-opacity: 0.1;
+    }
+    rect.w{
+      fill: White;
+    }
+    path.comfortZone10{
+      fill: rgb(0,0,200);
+      fill-opacity: 0.5;
+    }   
+
+    </style>
+    
+    <script>
+
+    var psychchart = {} || psychchart;
+
+    var margin = 40,
+        rbmargin = 60,
+        width = 700,
+        height = 500,
+	db_min = 10,
+	db_max = 36;
+    
+    function drawChart(data) {
+      
+      var db_extent = [db_min, db_max]
+      var db_scale = d3.scale.linear()
+          .range([margin,width-rbmargin])
+	  .domain(db_extent);
+
+      var hr_extent = [0, 30]
+      var hr_scale = d3.scale.linear()
+          .range([height-rbmargin,rbmargin])
+	  .domain(hr_extent);
+
+      var db_axis = d3.svg.axis().scale(db_scale);
+      var hr_axis = d3.svg.axis().scale(hr_scale).orient("right");
+
+      var line = d3.svg.line()
+          .x(function(d){return db_scale(d.db)})
+          .y(function(d){return hr_scale(1000 * d.hr)})
+          .interpolate('cardinal');
+      
+      var dpoly = data.rh100.concat({"db":9, "hr": 0.03});
+
+      d3.select("body")
+        .append("svg")
+          .attr("width", width)
+	  .attr("height", height)
+      
+      d3.select("svg")
+        .append("rect")
+          .attr("width", width-margin-rbmargin)
+          .attr("height", height-margin-rbmargin-20)
+          .attr("class", "chartbg")
+          .attr("transform", "translate(" + margin + "," + rbmargin + ")");
+
+      d3.select("svg")
+        .append("path")
+           .attr("d", line(dpoly)) 
+           .attr("class", "w");
+
+      d3.select("svg")
+        .append("path")
+          .attr("d", line(data.rh100))
+          .attr("class", "rh100");
+
+      for (var key in data){
+        if (key=="rh100") continue
+        d3.select("svg")
+          .append("path")
+            .attr("d", line(data[key]))
+            .attr("class", "rhline");
+      }
+
+      d3.select("svg")
+        .append("rect")
+          .attr("width", width - rbmargin)
+          .attr("height", rbmargin)
+          .attr("class", "w");
+ 
+      d3.select("svg")
+        .append("g")
+	  .attr("class", "db axis")
+	  .attr("transform", "translate(0," + (height-rbmargin) + ")")
+	.call(db_axis);
+
+      d3.select("svg")
+	.append("g")
+	  .attr("class", "hr axis")
+	  .attr("transform", "translate(" + (width-rbmargin) + ",0)")
+        .call(hr_axis);
+
+      d3.select(".db.axis")
+        .append("text")
+	  .text("Drybulb Temperature [°C]")
+	  .attr("x", (width / 2) - margin)
+	  .attr("y", rbmargin / 1.1);
+
+      d3.select(".hr.axis")
+        .append("text")
+	  .text("Humidity Ratio [g")
+          .attr("transform", "rotate (-90, -43, 0) translate(-360,90)")
+        .append("tspan")
+	  .text("w")
+	  .style("baseline-shift", "sub")
+	.append("tspan")
+	  .text(" / kg")
+	.append("tspan")
+	  .text("da")
+	  .style("baseline-shift", "sub")
+	.append("tspan")
+	  .text("]");
+    }
+
+    function drawComfortRegion(data){
+
+      d3.select("svg")
+        .append("path")
+ 
+
+    }
+
+    </script>
+</head>
+<body>
+    <script>
+        d3.json('data/rh-curves.json', drawChart);
+    </script>
+</body>
+</html>
