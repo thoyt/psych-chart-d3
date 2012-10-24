@@ -6,63 +6,13 @@
     <script type="text/javascript" src="js/psychrometrics.js"></script>
     <script type="text/javascript" src="js/comfortmodels.js"></script>
     <script type="text/javascript" src="js/psychchart.js"></script>
-    <style>
-
-    path {
-        fill:none;
-        stroke-width:1px;
-    }
-
-    .axis path{
-        fill:none;
-        stroke: black;
-    }
-    .axis {
-        font-size:10pt;
-        font-family:sans-serif;
-    }
-    .tick {
-        fill:none;
-        stroke:black;
-    }
-    circle.outer{
-        stroke:red;
-        stroke-width:2px;
-        fill: none;
-    }
-    circle.inner{
-        stroke:red;
-        stroke-width:2px;
-        fill: red;
-    }
-    path.rh100{
-        stroke:Black;
-    }
-    path.rhline{
-        stroke:Gray;
-    } 
-    path.w{
-        fill: White;
-    }
-    rect.chartbg{
-      fill: rgb(100,100,100);
-      fill-opacity: 0.1;
-    }
-    rect.w{
-      fill: White;
-    }
-    path.comfortzone{
-      fill: rgb(0,0,250);
-      fill-opacity: 0.5;
-    }   
-
-    </style>
+    <link rel="stylesheet" type="text/css" href="css/psychchart.css" />
 </head>
 <body>
     <script>
+    
       var d = {"ta": 26, "tr": 26, "vel": 0.2, "rh": 50, "met": 1.0, "clo": 0.5, "wme": 0.0 }
       pc.setupChart(d)
-        
 
     </script>
 </body>
