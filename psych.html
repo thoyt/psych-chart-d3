@@ -24,10 +24,9 @@
         stroke:black;
     }
     circle{
-        stroke:black;
-        stroke-width:0.5px;
-        fill:RoyalBlue;
-        opacity:0.6;
+        stroke:red;
+        stroke-width:2px;
+        fill: lightred;
     }
     path.rh100{
         stroke:Black;
@@ -45,8 +44,8 @@
     rect.w{
       fill: White;
     }
-    path.comfortZone10{
-      fill: rgb(0,0,200);
+    path.comfortzone{
+      fill: rgb(0,0,250);
       fill-opacity: 0.5;
     }   
 
@@ -63,17 +62,17 @@
 	db_min = 10,
 	db_max = 36;
     
-    function drawChart(data) {
-      
-      var db_extent = [db_min, db_max]
-      var db_scale = d3.scale.linear()
-          .range([margin,width-rbmargin])
-	  .domain(db_extent);
+    var db_extent = [db_min, db_max]
+    var db_scale = d3.scale.linear()
+        .range([margin,width-rbmargin])
+        .domain(db_extent);
 
-      var hr_extent = [0, 30]
-      var hr_scale = d3.scale.linear()
+    var hr_extent = [0, 30]
+    var hr_scale = d3.scale.linear()
           .range([height-rbmargin,rbmargin])
 	  .domain(hr_extent);
+    
+    function drawChart(data) {
 
       var db_axis = d3.svg.axis().scale(db_scale);
       var hr_axis = d3.svg.axis().scale(hr_scale).orient("right");
@@ -157,9 +156,29 @@
 
     function drawComfortRegion(data){
 
+      var line = d3.svg.line()
+          .x(function(d){return db_scale(d.db)})
+          .y(function(d){return hr_scale(1000 * d.hr)});
+
       d3.select("svg")
         .append("path")
- 
+          .attr("d", line(data) + "Z") 
+          .attr("class", "comfortzone");
+
+    }
+
+    function drawPoint(data){
+    
+      d3.select("svg")
+        .selectAll("circle")
+        .data(data)
+	.enter()
+        .append("circle");
+
+      d3.selectAll("circle")
+          .attr("cx", function(d){return db_scale(d.db)})
+          .attr("cy", function(d){return hr_scale(1000 * d.hr)})
+          .attr("r", 8);
 
     }
 
@@ -168,6 +187,10 @@
 <body>
     <script>
         d3.json('data/rh-curves.json', drawChart);
+        d3.csv('data/polygon-example.csv', drawComfortRegion);
+
+        var json = JSON.parse('[{"db":26, "hr": 0.01}]');
+        var t = setTimeout(function(){drawPoint(json)}, 100);
     </script>
 </body>
 </html>
