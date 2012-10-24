@@ -1,6 +1,8 @@
 
 var pc = new function() {
 
+  var CtoF = function(x){ return x * 9 / 5 + 32 }
+
   this.margin = 40
   this.rbmargin = 60
   this.width = 700
@@ -10,9 +12,15 @@ var pc = new function() {
 
   this.db_extent = [this.db_min, this.db_max]
   this.db_scale = d3.scale.linear()
-                      .range([this.margin,this.width - this.rbmargin])
+                    .range([this.margin,this.width - this.rbmargin])
                     .domain(this.db_extent)
 
+
+  this.db_extent_F = [CtoF(this.db_min), CtoF(this.db_max)]
+  this.db_scale_F = d3.scale.linear()
+                    .range([this.margin,this.width - this.rbmargin])
+                    .domain(this.db_extent_F)
+                  
   this.hr_extent = [0, 30]
   this.hr_scale = d3.scale.linear()
                     .range([this.height - this.rbmargin, this.rbmargin])
@@ -23,14 +31,13 @@ var pc = new function() {
                  .y(function(d){return this.hr_scale(1000 * d.hr)})
 
   this.drawChart = function(data) {
-    var db_axis = d3.svg.axis().scale(pc.db_scale);
+    var db_axis = d3.svg.axis().scale(pc.db_scale)
+    var db_axis_F = d3.svg.axis().scale(pc.db_scale_F)
     var hr_axis = d3.svg.axis().scale(pc.hr_scale).orient("right")
-    var db_scale = pc.db_scale
-    var hr_scale = pc.hr_scale
 
     var line = d3.svg.line()
-                 .x(function(d){return db_scale(d.db)})
-                 .y(function(d){return hr_scale(1000 * d.hr)})
+                 .x(function(d){return pc.db_scale(d.db)})
+                 .y(function(d){return pc.hr_scale(1000 * d.hr)})
                  .interpolate('cardinal')
 
     var dpoly = data.rh100.concat({"db":9, "hr": 0.03})
@@ -81,8 +88,17 @@ var pc = new function() {
     d3.select("svg")
       .append("g")
         .attr("class", "db axis")
+        .attr("id", "db-axis-C")
         .attr("transform", "translate(0," + (pc.height - pc.rbmargin) + ")")
         .call(db_axis)
+
+    d3.select("svg")
+      .append("g")
+         .attr("class", "db axis")
+         .attr("id", "db-axis-F")
+         .attr("opacity", "0")
+         .attr("transform", "translate(0," + (pc.height - pc.rbmargin) + ")")
+         .call(db_axis_F)
 
     d3.select("svg")
       .append("g")
@@ -90,24 +106,44 @@ var pc = new function() {
         .attr("transform", "translate(" + (pc.width - pc.rbmargin) + ",0)")
         .call(hr_axis)
 
-    d3.select(".db.axis")
+    d3.select("#db-axis-C")
       .append("text")
         .text("Drybulb Temperature [°C]")
-        .attr("x", (pc.width / 2) - 1.9* pc.margin)
-        .attr("y", pc.rbmargin / 1.3)
+          .attr("id", "db-unit")
+          .attr("x", (pc.width / 2) - 1.9 * pc.margin)
+          .attr("y", pc.rbmargin / 1.3)
+
+    d3.select("#db-axis-F")
+      .append("text")
+        .text("Drybulb Temperature [°F]")
+          .attr("id", "db-unit")
+          .attr("x", (pc.width / 2) - 1.9 * pc.margin)
+          .attr("y", pc.rbmargin / 1.3)
 
     d3.select(".hr.axis")
       .append("text")
-        .text("Humidity Ratio [g")
+        .attr("id", "hr-text")
         .attr("transform", "rotate (-90, -43, 0) translate(-360,90)")
+      .append("tspan")
+        .text("Humidity Ratio [g")
+        .attr("id", "hr-unit0")
+
+    d3.select("#hr-text")
       .append("tspan")
         .text("w")
         .style("baseline-shift", "sub")
+
+    d3.select("#hr-text")
       .append("tspan")
         .text(" / kg")
+        .attr("id", "hr-unit1")
+
+    d3.select("#hr-text")
       .append("tspan")
         .text("da")
         .style("baseline-shift", "sub")
+
+    d3.select("#hr-text")
       .append("tspan")
         .text("]")
   }
@@ -193,6 +229,22 @@ var pc = new function() {
     var t = setTimeout(function(){pc.drawPoint(json)}, 50)
     var b = pc.findComfortBoundary(d,0.5)
     var t = setTimeout(function(){pc.drawComfortRegion(b)}, 10)
+  }
+
+  this.toggleUnits = function(isCelsius) {
+  
+    if (isCelsius){
+      d3.select("#db-axis-C").attr("opacity", "100")
+      d3.select("#db-axis-F").attr("opacity", "0")
+      document.getElementById('hr-unit0').textContent = "Humidity Ratio [g"
+      document.getElementById('hr-unit1').textContent = "/ kg"
+    }else{
+      d3.select("#db-axis-C").attr("opacity", "0")
+      d3.select("#db-axis-F").attr("opacity", "100")
+      document.getElementById('hr-unit0').textContent = "Humidity Ratio [lb"
+      document.getElementById('hr-unit1').textContent = "/ klb"
+    }
+  
   }
 
 }
