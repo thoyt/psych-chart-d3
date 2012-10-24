@@ -3,7 +3,8 @@
 <head>
     <meta charset="utf-8">
     <script type="text/javascript" src="d3.js"></script>
-    
+    <script type="text/javascript" src="js/psychrometrics.js"></script>
+    <script type="text/javascript" src="js/comfortmodels.js"></script>
     <style>
 
     path {
@@ -23,10 +24,15 @@
         fill:none;
         stroke:black;
     }
-    circle{
+    circle.outer{
         stroke:red;
         stroke-width:2px;
-        fill: lightred;
+        fill: none;
+    }
+    circle.inner{
+        stroke:red;
+        stroke-width:2px;
+        fill: red;
     }
     path.rh100{
         stroke:Black;
@@ -72,11 +78,15 @@
           .range([height-rbmargin,rbmargin])
 	  .domain(hr_extent);
     
+    var pline = d3.svg.line()
+        .x(function(d){return db_scale(d.db)})
+        .y(function(d){return hr_scale(1000 * d.hr)});
+    
     function drawChart(data) {
 
       var db_axis = d3.svg.axis().scale(db_scale);
       var hr_axis = d3.svg.axis().scale(hr_scale).orient("right");
-
+      
       var line = d3.svg.line()
           .x(function(d){return db_scale(d.db)})
           .y(function(d){return hr_scale(1000 * d.hr)})
@@ -97,6 +107,17 @@
           .attr("transform", "translate(" + margin + "," + rbmargin + ")");
 
       d3.select("svg")
+        .append("defs")
+        .append("clipPath")
+	  .attr("id", "clip")
+	    .append("rect")
+	      .attr("x", "0")
+	      .attr("y", "0")
+              .attr("width", width-margin-rbmargin)
+              .attr("height", height-margin-rbmargin-20)
+              .attr("transform", "translate(" + margin + "," + rbmargin + ")");
+
+      d3.select("svg")
         .append("path")
            .attr("d", line(dpoly)) 
            .attr("class", "w");
@@ -104,22 +125,18 @@
       d3.select("svg")
         .append("path")
           .attr("d", line(data.rh100))
-          .attr("class", "rh100");
+          .attr("class", "rh100")
+	  .attr("clip-path", "url(#clip)");
 
       for (var key in data){
         if (key=="rh100") continue
         d3.select("svg")
           .append("path")
             .attr("d", line(data[key]))
-            .attr("class", "rhline");
+            .attr("class", "rhline")
+	    .attr("clip-path", "url(#clip)");
       }
 
-      d3.select("svg")
-        .append("rect")
-          .attr("width", width - rbmargin)
-          .attr("height", rbmargin)
-          .attr("class", "w");
- 
       d3.select("svg")
         .append("g")
 	  .attr("class", "db axis")
@@ -135,8 +152,8 @@
       d3.select(".db.axis")
         .append("text")
 	  .text("Drybulb Temperature [°C]")
-	  .attr("x", (width / 2) - margin)
-	  .attr("y", rbmargin / 1.1);
+	  .attr("x", (width / 2) - 1.9* margin)
+	  .attr("y", rbmargin / 1.3);
 
       d3.select(".hr.axis")
         .append("text")
@@ -156,41 +173,97 @@
 
     function drawComfortRegion(data){
 
-      var line = d3.svg.line()
-          .x(function(d){return db_scale(d.db)})
-          .y(function(d){return hr_scale(1000 * d.hr)});
-
       d3.select("svg")
         .append("path")
-          .attr("d", line(data) + "Z") 
+	  .attr("clip-path", "url(#clip)")
+          .attr("d", pline(data) + "Z") 
           .attr("class", "comfortzone");
+
+    }
+
+    function redrawComfortRegion(data){
+     
+      d3.select("path.comfortzone")
+        .attr("d", pline(data) + "Z");
 
     }
 
     function drawPoint(data){
     
       d3.select("svg")
-        .selectAll("circle")
-        .data(data)
-	.enter()
-        .append("circle");
+        .append("circle")
+          .attr("class", "outer")
+          .attr("r", 12);
+
+      d3.select("svg")
+        .append("circle")
+          .attr("class", "inner")
+          .attr("r", 2);
 
       d3.selectAll("circle")
-          .attr("cx", function(d){return db_scale(d.db)})
-          .attr("cy", function(d){return hr_scale(1000 * d.hr)})
-          .attr("r", 8);
+          .attr("cx", db_scale(data[0].db))
+          .attr("cy", hr_scale(1000 * data[0].hr));
 
     }
+
+    function redrawPoint(data){
+
+      d3.selectAll("circle")
+          .attr("cx", db_scale(data[0].db))
+          .attr("cy", hr_scale(1000 * data[0].hr));
+
+    }
+
+    function getHumRatio(db, rh){
+      return psy.humratio(psy.PROP.Patm, rh * psy.satpress(db) / 100); 
+    }
+
+    function findComfortBoundary(d, pmvlimit){
+       var boundary = [];
+
+       function solve(rh, target){
+         var epsilon = 0.001;
+         var a = 0;
+         var b = 100;
+	 var fn = function(db){
+	   return pmv(db, d.tr, d.vel, rh, d.met, d.clo, d.wme)[0]
+         }
+         t = psy.bisect(a, b, fn, epsilon, target)
+         boundary.push({"db": t, "hr": getHumRatio(t,rh)});
+       }
+
+       for (rh = 0; rh <= 100; rh += 10){
+         solve(rh, -pmvlimit);  
+       }
+       while (true){
+         t += 0.5;
+         boundary.push({"db": t, "hr": getHumRatio(t,100)});
+	 if (pmv(t, d.tr, d.vel, rh, d.met, d.clo, d.wme)[0] > pmvlimit) break;
+       }
+       for (rh = 100; rh >= 0; rh -= 10){
+         solve(rh, pmvlimit);
+       }
+       return boundary
+    }
+    
+    function setupChart(d){
+        d3.json('data/rh-curves.json', drawChart);
+        var json = [{"db": d.ta, "hr": getHumRatio(d.ta, d.rh)}];
+        var t = setTimeout(function(){drawPoint(json)}, 50);
+	var b = findComfortBoundary(d,0.5);
+        var t = setTimeout(function(){drawComfortRegion(b);}, 10);
+    }
+    
+    
 
     </script>
 </head>
 <body>
     <script>
-        d3.json('data/rh-curves.json', drawChart);
-        d3.csv('data/polygon-example.csv', drawComfortRegion);
+      var d = {"ta": 26, "tr": 26, "vel": 0.2, "rh": 50, "met": 1.0, "clo": 0.5, "wme": 0.0 }
+      setupChart(d);
+        
 
-        var json = JSON.parse('[{"db":26, "hr": 0.01}]');
-        var t = setTimeout(function(){drawPoint(json)}, 100);
     </script>
 </body>
 </html>
