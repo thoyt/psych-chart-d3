@@ -31,6 +31,8 @@ var pc = new function() {
                  .y(function(d){return this.hr_scale(1000 * d.hr)})
 
   this.drawChart = function(data) {
+	
+	  console.log(data)
     var db_axis = d3.svg.axis().scale(pc.db_scale)
     var db_axis_F = d3.svg.axis().scale(pc.db_scale_F)
     var hr_axis = d3.svg.axis().scale(pc.hr_scale).orient("right")
@@ -44,6 +46,7 @@ var pc = new function() {
 
     d3.select("body")
       .append("svg")
+	.attr("class", "chart")
         .attr("width", pc.width)
         .attr("height", pc.height)
 
@@ -203,7 +206,7 @@ var pc = new function() {
       var a = 0
       var b = 100
       var fn = function(db){
-        return pmv(db, d.tr, d.vel, rh, d.met, d.clo, d.wme)[0]
+        return pmvElevatedAirspeed(db, d.tr, d.vel, rh, d.met, d.clo, d.wme)[0][0]
       }
       t = psy.bisect(a, b, fn, epsilon, target)
       return {"db": t, "hr": pc.getHumRatio(t,rh)}
@@ -215,7 +218,7 @@ var pc = new function() {
     while (true){
       t += 0.5
       boundary.push({"db": t, "hr": pc.getHumRatio(t,100)})
-      if (pmv(t, d.tr, d.vel, rh, d.met, d.clo, d.wme)[0] > pmvlimit) break
+      if (pmvElevatedAirspeed(t, d.tr, d.vel, rh, d.met, d.clo, d.wme)[0][0] > pmvlimit) break
     }
     for (rh = 100; rh >= 0; rh -= 10){
       boundary.push(solve(rh, pmvlimit))
@@ -226,9 +229,9 @@ var pc = new function() {
   this.setupChart = function(d){
     d3.json('data/rh-curves.json', pc.drawChart)
     var json = [{"db": d.ta, "hr": pc.getHumRatio(d.ta, d.rh)}]
-    var t = setTimeout(function(){pc.drawPoint(json)}, 50)
     var b = pc.findComfortBoundary(d,0.5)
-    var t = setTimeout(function(){pc.drawComfortRegion(b)}, 10)
+    setTimeout(function(){pc.drawComfortRegion(b)}, 10)
+    setTimeout(function(){pc.drawPoint(json)}, 10)
   }
 
   this.toggleUnits = function(isCelsius) {
